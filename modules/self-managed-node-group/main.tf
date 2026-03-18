@@ -57,7 +57,8 @@ locals {
 }
 
 data "aws_ssm_parameter" "ami" {
-  count = var.create ? 1 : 0
+  # only pull the ami if we're creating the resource AND we're not already using a custom ami
+  count = var.create && length(var.ami_id) == 0 ? 1 : 0
 
   name = local.ami_type_to_ssm_param[var.ami_type]
 }
@@ -236,7 +237,7 @@ resource "aws_launch_template" "this" {
     arn = var.create_iam_instance_profile ? aws_iam_instance_profile.this[0].arn : var.iam_instance_profile_arn
   }
 
-  image_id                             = coalesce(var.ami_id, nonsensitive(data.aws_ssm_parameter.ami[0].value))
+  image_id                             = coalesce(var.ami_id, nonsensitive(try(data.aws_ssm_parameter.ami[0].value, "")))
   instance_initiated_shutdown_behavior = var.instance_initiated_shutdown_behavior
 
   dynamic "instance_market_options" {
